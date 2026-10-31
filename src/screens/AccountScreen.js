@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { getUserProfile } from '../services/api';
 import '../styles/AccountScreen.css';
 
 function AccountScreen({
@@ -9,28 +10,11 @@ function AccountScreen({
 }) {
     const isDark = theme === 'dark';
 
-    const [profiles, setProfiles] = useState([
-        {
-            id: 1,
-            name: 'Carlos García',
-            gender: 'Masculino',
-            birthDate: '2000-05-15',
-            conditions: 'Sin antecedentes registrados',
-            bloodType: 'O+',
-            allergies: 'Ninguna registrada',
-            photo: null
-        }
-    ]);
+   const [profiles, setProfiles] = useState([]);
+   const [profileLoading, setProfileLoading] = useState(true);
+   const [profileError, setProfileError] = useState('');
 
-    const [contacts, setContacts] = useState([
-        {
-            id: 1,
-            name: 'Ana García',
-            relationship: 'Esposa',
-            phone: '5555555555',
-            primary: true
-        }
-    ]);
+    const [contacts, setContacts] = useState([]);
 
     const [showContactForm, setShowContactForm] = useState(false);
     const [editingContact, setEditingContact] = useState(null);
@@ -39,8 +23,7 @@ function AccountScreen({
     const [editingProfile, setEditingProfile] = useState(null);
 
     const [showSOS, setShowSOS] = useState(false);
-    const [selectedProfile, setSelectedProfile] = useState(profiles[0]);
-
+    const [selectedProfile, setSelectedProfile] = useState(null);
     const [contactForm, setContactForm] = useState({
         name: '',
         relationship: '',
@@ -60,6 +43,51 @@ function AccountScreen({
 
     const fileInputRef = useRef(null);
     const [photoTarget, setPhotoTarget] = useState(null);
+
+useEffect(() => {
+    const loadUserProfile = async () => {
+        try {
+            setProfileLoading(true);
+            setProfileError('');
+
+            const response = await getUserProfile();
+
+            const data = response?.data || response;
+            const account = data?.cuenta;
+            const profile = data?.perfil;
+
+            if (!account) {
+                throw new Error('No se encontraron los datos de la cuenta.');
+            }
+
+            const userProfile = {
+                id: profile?.id_perfil || account.id_cuenta,
+                name: profile?.nombre || account.nombre || 'Usuario DECIA',
+                gender: profile?.genero || '',
+                birthDate: profile?.fecha_nacimiento || '',
+                conditions: 'Sin antecedentes registrados',
+                bloodType: '',
+                allergies: '',
+                photo: null
+            };
+
+            setProfiles([userProfile]);
+            setSelectedProfile(userProfile);
+
+        } catch (error) {
+            console.error('Error al obtener el perfil:', error);
+            setProfileError(
+                error.message || 'No fue posible cargar tu perfil.'
+            );
+        } finally {
+            setProfileLoading(false);
+        }
+    };
+
+    loadUserProfile();
+}, []);
+
+
 
     const getInitials = (name) => {
         if (!name) return 'US';
@@ -164,46 +192,43 @@ function AccountScreen({
         }
     };
 
-    const handleContactSubmit = (event) => {
-        event.preventDefault();
+   const handleContactSubmit = (event) => {
+    event.preventDefault();
 
-        if (!contactForm.name.trim() || !contactForm.phone.trim()) {
-            alert('El nombre y teléfono son obligatorios.');
-            return;
+    if (!contactForm.name.trim() || !contactForm.phone.trim()) {
+        alert('El nombre y teléfono son obligatorios.');
+        return;
+    }
+
+    const contact = editingContact
+        ? {
+            ...editingContact,
+            ...contactForm
+        }
+        : {
+            id: Date.now(),
+            ...contactForm
+        };
+
+    setContacts(prev => {
+        const updated = editingContact
+            ? prev.map(item =>
+                item.id === editingContact.id ? contact : item
+            )
+            : [...prev, contact];
+
+        if (contactForm.primary || updated.length === 1) {
+            return updated.map(item => ({
+                ...item,
+                primary: item.id === contact.id
+            }));
         }
 
-        if (editingContact) {
-            setContacts(prev =>
-                prev.map(contact =>
-                    contact.id === editingContact.id
-                        ? {
-                            ...contact,
-                            ...contactForm
-                        }
-                        : contact
-                )
-            );
-        } else {
-            const newContact = {
-                id: Date.now(),
-                ...contactForm
-            };
+        return updated;
+    });
 
-            setContacts(prev => [...prev, newContact]);
-        }
-
-        if (contactForm.primary) {
-            setContacts(prev =>
-                prev.map(contact =>
-                    contact.id === (editingContact?.id || contacts[contacts.length - 1]?.id)
-                        ? { ...contact, primary: true }
-                        : { ...contact, primary: false }
-                )
-            );
-        }
-
-        setShowContactForm(false);
-    };
+    setShowContactForm(false);
+};
 
     const handleAddProfile = () => {
         setEditingProfile(null);
@@ -259,7 +284,7 @@ function AccountScreen({
                 )
             );
 
-            if (selectedProfile.id === editingProfile.id) {
+           if (selectedProfile?.id === editingProfile.id){
                 setSelectedProfile(updatedProfile);
             }
         } else {
@@ -372,14 +397,14 @@ function AccountScreen({
                         <div className="medical-item">
                             <span>Alergias</span>
                             <strong>
-                                {selectedProfile?.allergies || 'No registradas'}
+                                 {selectedProfile?.allergies || 'No registradas'}
                             </strong>
                         </div>
 
                         <div className="medical-item medical-item-wide">
                             <span>Padecimientos / antecedentes</span>
-                            <strong>
-                                {selectedProfile?.conditions || 'No registrados'}
+                           <strong>
+                                 {selectedProfile?.conditions || 'No registrados'}          
                             </strong>
                         </div>
 
@@ -402,6 +427,13 @@ function AccountScreen({
                         >
                             + Agregar
                         </button>
+                        {profileLoading && (
+                                <p>Cargando información de tu cuenta...</p>
+                            )}
+
+                            {profileError && (
+                                <p role="alert">{profileError}</p>
+                            )}
                     </div>
 
                     <div className="profiles-list">

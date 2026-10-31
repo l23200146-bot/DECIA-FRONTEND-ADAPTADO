@@ -477,4 +477,26 @@
     }
    
 }
+.scale-options {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.text-answer {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #cbd8dc;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+.photo-preview img {
+    display: block;
+    margin: 12px auto;
+    border-radius: 10px;
+}
 

@@ -10,7 +10,11 @@ import AccountScreen from './screens/AccountScreen';
 import LoginScreen from './screens/LoginScreen';
 import NearbyDoctorsScreen from './screens/NearbyDoctorsScreen';
 import RegisterScreen from './screens/RegisterScreen';
-import VerifyCodeScreen from './screens/VerifyCodeScreen';
+
+import {
+    logoutUser,
+    clearAuthSession
+} from './services/api';
 
 const RECENT_EVALUATIONS_KEY =
     'deciaRecentEvaluations';
@@ -19,12 +23,15 @@ function App() {
 
     const [showSplash, setShowSplash] = useState(true);
 
-    const [currentScreen, setCurrentScreen] = useState(() => {
-        const savedUser = localStorage.getItem('deciaUser');
-        return savedUser ? 'dashboard' : 'login';
-    });
-    const [verificationEmail, setVerificationEmail] = 
-    useState('');
+   const [currentScreen, setCurrentScreen] = useState(() => {
+    const savedUser = localStorage.getItem('deciaUser');
+    const savedToken = localStorage.getItem('deciaToken');
+
+    return savedUser && savedToken
+        ? 'dashboard'
+        : 'login';
+});
+
 
     const [symptomName, setSymptomName] =
         useState('');
@@ -85,31 +92,34 @@ function App() {
     };
 
   const handleFindDoctor = (result) => {
-
-    const symptom = result?.symptomName || symptomName;
+    const symptom = (
+        result?.symptomName ||
+        symptomName ||
+        ''
+    ).toLowerCase();
 
     let specialty = 'Medicina Interna';
 
-    if (symptom === 'Dolor de cabeza') {
+    if (
+        symptom.includes('cabeza') ||
+        symptom.includes('migraña')
+    ) {
         specialty = 'Neurología';
-    }
-
-    if (symptom === 'Dolor abdominal') {
-        specialty = 'Medicina Interna';
-    }
-
-    if (symptom === 'Dolor en el pecho') {
+    } else if (
+        symptom.includes('pecho') ||
+        symptom.includes('respiratorio')
+    ) {
         specialty = 'Urgenciología';
-    }
-
-    if (symptom === 'Fiebre') {
+    } else if (
+        symptom.includes('abdominal') ||
+        symptom.includes('fiebre')
+    ) {
         specialty = 'Medicina Interna';
     }
 
     setRecommendedSpecialty(specialty);
     setCurrentScreen('nearbyDoctors');
 };
-
     const handleSetTheme = (value) => {
 
         setTheme(value);
@@ -203,75 +213,32 @@ function App() {
         );
     };
 
+const handleEvaluationFinish = (result) => {
+    const finalResult = result?.resultado_final || result;
 
-    const handleEvaluationFinish = (result) => {
-
-        const resultWithUrgency = {
-
-            ...result,
-
-            urgency: 'AMARILLO'
-
-        };
-
-
-        const currentDate =
-            new Date().toLocaleDateString(
-                'es-MX',
-                {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                }
-            );
-
-
-        const newEvaluation = {
-
-            ...resultWithUrgency,
-
-            date: currentDate,
-
-            id: Date.now()
-
-        };
-
-
-        const updatedEvaluations = [
-
-            newEvaluation,
-
-            ...recentEvaluations
-
-        ].slice(0, 5);
-
-
-        localStorage.setItem(
-
-            RECENT_EVALUATIONS_KEY,
-
-            JSON.stringify(
-                updatedEvaluations
-            )
-
-        );
-
-
-        setRecentEvaluations(
-            updatedEvaluations
-        );
-
-
-        setEvaluationResult(
-            resultWithUrgency
-        );
-
-
-        setCurrentScreen(
-            'result'
-        );
-
+    const resultWithUrgency = {
+        ...result,
+        urgency:
+            finalResult?.clasificacion_color ||
+            result?.urgency ||
+            'AMARILLO'
     };
+
+    const updatedEvaluations = [
+        resultWithUrgency,
+        ...recentEvaluations
+    ].slice(0, 5);
+
+    setRecentEvaluations(updatedEvaluations);
+
+    localStorage.setItem(
+        'deciaRecentEvaluations',
+        JSON.stringify(updatedEvaluations)
+    );
+
+    setEvaluationResult(resultWithUrgency);
+    setCurrentScreen('result');
+};
 
 
     const handleRecentSelect = (evaluation) => {
@@ -340,27 +307,22 @@ function App() {
        CERRAR SESIÓN
     ========================================== */
 
-    const handleLogout = () => {
-
-        localStorage.removeItem(
-            'deciaUser'
+   const handleLogout = async () => {
+    try {
+        await logoutUser();
+    } catch (error) {
+        console.error(
+            'Error al cerrar sesión en el servidor:',
+            error
         );
-
-        localStorage.removeItem(
-            'deciaToken'
-        );
-
+    } finally {
+        clearAuthSession();
         setEvaluationResult(null);
-
         setSymptomName('');
-
         setProfileId(null);
-
-        setCurrentScreen(
-            'login'
-        );
-
-    };
+        setCurrentScreen('login');
+    }
+};
 
 
     /* ==========================================
@@ -406,24 +368,13 @@ function App() {
     return (
         <RegisterScreen
             onBackToLogin={() => setCurrentScreen('login')}
-            onRegisterSuccess={(newUser) => {
-                setVerificationEmail(newUser.email);
-                setCurrentScreen('verifyCode');
-                }}
-            />
-        );
-    }
-    if (currentScreen === 'verifyCode') {
-        return (
-            <VerifyCodeScreen
-                email={verificationEmail}
-                onBack={() => setCurrentScreen('register')}
-                onVerified={() => {
-                    setCurrentScreen('dashboard');
-                }}
-            />
-        );
-    }
+            onRegisterSuccess={() => {
+                setCurrentScreen('dashboard');
+            }}
+        />
+    );
+}
+   
     /* ==========================================
        DASHBOARD
     ========================================== */
@@ -437,6 +388,7 @@ function App() {
 
             <DashboardScreen
 
+                user={JSON.parse(localStorage.getItem('deciaUser') || '{}')}
 
                 language={language}
                 theme={theme}
@@ -598,41 +550,19 @@ function App() {
        CUESTIONARIO
     ========================================== */
 
-    if (
-        currentScreen ===
-        'symptomStep1'
-    ) {
-
-        return (
-
-            <SymptomStep1
-
-                language={language}
-                theme={theme}
-
-                symptomName={
-                    symptomName
-                }
-
-                profileId={
-                    profileId
-                }
-
-                onBack={() =>
-                    setCurrentScreen(
-                        'selectProfile'
-                    )
-                }
-
-                onFinish={
-                    handleEvaluationFinish
-                }
-
-            />
-
-        );
-
-    }
+    if (currentScreen === 'symptomStep1') {
+    return (
+        <SymptomStep1
+            language={language}
+            theme={theme}
+            symptomName={symptomName}
+            profileId={profileId}
+      
+            onBack={() => setCurrentScreen('selectProfile')}
+            onFinish={handleEvaluationFinish}
+        />
+    );
+}
 
 
     /* ==========================================

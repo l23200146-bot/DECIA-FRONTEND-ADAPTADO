@@ -96,7 +96,7 @@ const commonSymptoms = [
     'Dificultad para respirar'
 ];
 
-function SearchInput() {
+function SearchInput({ onSearch }) {
     const [search, setSearch] = useState('');
 
     const filteredSymptoms = commonSymptoms.filter((symptom) =>
@@ -105,36 +105,43 @@ function SearchInput() {
 
     const showSuggestions = search.trim().length > 0;
 
+    const handleSearch = () => {
+        if (!search.trim()) return;
+        onSearch(search.trim());
+    };
+
     return (
         <div className="search-wrapper">
-
             <div className="search-container">
-
                 <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSearch();
+                    }}
                     placeholder="Ingresa algún síntoma..."
                     aria-label="Buscar síntomas"
                 />
 
                 <button
                     className="search-button"
+                    onClick={handleSearch}
+                    type="button"
                     aria-label="Buscar"
                 >
                     Buscar
                 </button>
-
             </div>
 
             {showSuggestions && (
                 <div className="search-suggestions">
-
                     {filteredSymptoms.length > 0 ? (
                         filteredSymptoms.slice(0, 5).map((symptom) => (
                             <button
                                 key={symptom}
-                                onClick={() => setSearch(symptom)}
+                                type="button"
+                                onClick={() => onSearch(symptom)}
                             >
                                 {symptom}
                             </button>
@@ -142,14 +149,11 @@ function SearchInput() {
                     ) : (
                         <p>No encontramos ese síntoma.</p>
                     )}
-
                 </div>
             )}
-
         </div>
     );
 }
-
 /* =========================
    ACCIONES RÁPIDAS
 ========================= */
@@ -249,6 +253,7 @@ function EmptyActivity() {
 function DashboardScreen({
     language,
     theme,
+     user,
     onEmergency,
     onSymptomSelect,
     recentEvaluations = [],
@@ -326,7 +331,7 @@ function DashboardScreen({
 
                     {/* BUSCADOR */}
 
-                    <SearchInput />
+                   <SearchInput onSearch={onSymptomSelect} />
 
 
                     {/* BIENVENIDA */}
@@ -335,7 +340,9 @@ function DashboardScreen({
 
                         <div className="welcome-text">
 
-                            <h1>¡Hola, Carlos!</h1>
+                          <h1>
+                       ¡Hola, {user?.nombre?.split(' ')[0] || 'bienvenido'}!
+                        </h1>
 
                             <p>
                                 ¿Cómo podemos ayudarte hoy?

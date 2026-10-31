@@ -25,100 +25,56 @@ function LoginScreen({ onLogin, onRegister }) {
         }
     };
 
-    const handleLogin = (event) => {
-        event.preventDefault();
+  const handleLogin = async (event) => {
+    event.preventDefault();
 
-        setError('');
+    setError('');
 
-        if (!username.trim() || !password.trim()) {
-            setError('Ingresa tu usuario y contraseña.');
-            return;
-        }
+    if (!username.trim() || !password.trim()) {
+        setError('Ingresa tu correo y contraseña.');
+        return;
+    }
 
+    // El backend recibe un correo, no un nombre de usuario.
+    const email = username.trim().toLowerCase();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    
+    if (!emailRegex.test(email)) {
+        setError('Ingresa un correo electrónico válido.');
+        return;
+    }
+
+    try {
         setLoading(true);
 
-        setTimeout(() => {
+        // Solicitar autenticación al backend.
+        const response = await loginUser(email, password);
 
-            // Buscar una cuenta creada desde RegisterScreen
-            const registeredUser = localStorage.getItem(
-                'deciaRegisteredUser'
-            );
+        // Guardar preferencia de sesión.
+        if (rememberMe) {
+            localStorage.setItem('deciaRememberMe', 'true');
+        } else {
+            localStorage.removeItem('deciaRememberMe');
+        }
 
-            let registeredAccount = null;
+        // api.js se encarga de guardar los tokens y el usuario.
+        if (onLogin) {
+            onLogin(response?.usuario || response);
+        }
 
-            if (registeredUser) {
-                try {
-                    registeredAccount = JSON.parse(registeredUser);
-                } catch (error) {
-                    console.error(
-                        'Error al leer la cuenta registrada:',
-                        error
-                    );
-                }
-            }
+    } catch (error) {
+        console.error('Error al iniciar sesión:', error);
 
-            // Cuenta de prueba
-            const isDemoUser =
-                username.trim() === 'user' &&
-                password === '1234';
+        setError(
+            error.message ||
+            'No fue posible iniciar sesión. Inténtalo nuevamente.'
+        );
 
-            // Cuenta creada por el usuario
-            const isRegisteredUser =
-                registeredAccount &&
-                username.trim().toLowerCase() ===
-                    registeredAccount.email &&
-                password === registeredAccount.password;
-
-            if (isDemoUser || isRegisteredUser) {
-
-                const loggedUser = isRegisteredUser
-                    ? {
-                        username: registeredAccount.email,
-                        name: registeredAccount.name
-                    }
-                    : {
-                        username: 'user',
-                        name: 'Usuario DECIA'
-                    };
-
-                localStorage.setItem(
-                    'deciaUser',
-                    JSON.stringify(loggedUser)
-                );
-
-                localStorage.setItem(
-                    'deciaToken',
-                    'demo-token'
-                );
-
-                if (rememberMe) {
-                    localStorage.setItem(
-                        'deciaRememberMe',
-                        'true'
-                    );
-                } else {
-                    localStorage.removeItem(
-                        'deciaRememberMe'
-                    );
-                }
-
-                setLoading(false);
-
-                if (onLogin) {
-                    onLogin();
-                }
-
-            } else {
-
-                setLoading(false);
-
-                setError(
-                    'Usuario, correo o contraseña incorrectos.'
-                );
-            }
-
-        }, 900);
-    };
+    } finally {
+        setLoading(false);
+    }
+};
 
     const openRecovery = () => {
         setRecoveryEmail('');
@@ -183,7 +139,7 @@ function LoginScreen({ onLogin, onRegister }) {
                     <div className="form-field">
 
                         <label>
-                            Correo o usuario
+                            Correo electrónico
                         </label>
 
                         <div className="input-wrapper">

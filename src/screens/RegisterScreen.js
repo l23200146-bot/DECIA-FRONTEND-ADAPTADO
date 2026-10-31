@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/RegisterScreen.css';
-
+import { registerUser } from '../services/api';
 
 function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
     const [fullName, setFullName] = useState('');
@@ -8,7 +8,7 @@ function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [phone, setPhone] = useState('');
-
+    const [birthDate, setBirthDate] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -30,8 +30,6 @@ function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
         }
 
         let score = 0;
-
-        if (password.length >= 6) score++;
         if (password.length >= 8) score++;
         if (/[A-Z]/.test(password)) score++;
         if (/[0-9]/.test(password)) score++;
@@ -62,16 +60,18 @@ function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
 
     const passwordStrength = getPasswordStrength();
 
-    const isValidEmail = (value) => {
+  const isValidEmail = (value) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-        };
+};
 
-    const isFormValid =
-        fullName.trim().length >= 3 &&
-        isValidEmail(email) &&
-        password.length >= 6 &&
-        confirmPassword === password &&
-        acceptedTerms;
+   const isFormValid =
+    fullName.trim().length >= 3 &&
+    fullName.trim().length <= 50 &&
+    isValidEmail(email) &&
+    birthDate !== '' &&
+    password.length >= 8 &&
+    confirmPassword === password &&
+    acceptedTerms;
 
     const handlePhoneChange = (value) => {
         let cleanPhone = value.replace(/[^\d+]/g, '');
@@ -87,90 +87,87 @@ function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
         setPhone(cleanPhone);
     };
 
-    const handleRegister = (event) => {
-        event.preventDefault();
+    const handleRegister = async (event) => {
+    event.preventDefault();
 
-        setError('');
-        setSuccess('');
+    setError('');
+    setSuccess('');
 
-        if (fullName.trim().length < 3) {
-            setError('Ingresa tu nombre completo.');
-            return;
-        }
+    if (fullName.trim().length < 3 || fullName.trim().length > 50) {
+        setError('El nombre debe tener entre 3 y 50 caracteres.');
+        return;
+    }
 
-        if (!isValidEmail(email)) {
-            setError('Ingresa un correo electrónico válido.');
-            return;
-        }
+    if (!isValidEmail(email)) {
+        setError('Ingresa un correo electrónico válido.');
+        return;
+    }
 
-        if (password.length < 6) {
-            setError('La contraseña debe tener mínimo 6 caracteres.');
-            return;
-        }
+    if (!birthDate) {
+        setError('Selecciona tu fecha de nacimiento.');
+        return;
+    }
 
-        if (password !== confirmPassword) {
-            setError('Las contraseñas no coinciden.');
-            return;
-        }
+    if (password.length < 8) {
+        setError('La contraseña debe tener mínimo 8 caracteres.');
+        return;
+    }
 
-        if (!acceptedTerms) {
-            setError('Debes aceptar el Aviso de Privacidad y los Términos de DECIA.');
-            return;
-        }
+    if (password !== confirmPassword) {
+        setError('Las contraseñas no coinciden.');
+        return;
+    }
 
-        const existingUser = localStorage.getItem('deciaRegisteredUser');
+    if (!acceptedTerms) {
+        setError(
+            'Debes aceptar el Aviso de Privacidad y los Términos de DECIA.'
+        );
+        return;
+    }
 
-        if (existingUser) {
-            try {
-                const savedUser = JSON.parse(existingUser);
-
-                if (
-                    savedUser.email &&
-                    savedUser.email.toLowerCase() === email.trim().toLowerCase()
-                ) {
-                    setError('Este correo ya está registrado.');
-                    return;
-                }
-            } catch (parseError) {
-                console.error('Error al leer usuario registrado:', parseError);
-            }
-        }
-
+    try {
         setLoading(true);
 
+        // Datos que espera el backend de DECIA.
+        const userData = {
+            email: email.trim().toLowerCase(),
+            password: password,
+            telefono: phone.trim() || null,
+            nombre: fullName.trim(),
+            genero: 'P',
+            fecha_nacimiento: birthDate,
+            es_fumador: false,
+            has_tatuaje: false,
+            rol_id_rol: 1
+        };
+
+        // Enviar registro a FastAPI.
+        const response = await registerUser(userData);
+
+        setSuccess('¡Cuenta creada exitosamente!');
+
+        // registerUser guarda los tokens si api.js tiene
+        // implementado saveAuthSession.
         setTimeout(() => {
-            const newUser = {
-                name: fullName.trim(),
-                email: email.trim().toLowerCase(),
-                password: password,
-                phone: phone.trim(),
-                verified: false,
+            if (onRegisterSuccess) {
+                onRegisterSuccess(response?.usuario || response);
+            } else if (onBackToLogin) {
+                onBackToLogin();
+            }
+        }, 1000);
 
-                profile: {
-                    name: fullName.trim(),
-                    isPrimary: true
-                },
+    } catch (error) {
+        console.error('Error al registrar usuario:', error);
 
-                createdAt: new Date().toISOString()
-            };
+        setError(
+            error.message ||
+            'No fue posible crear tu cuenta. Inténtalo nuevamente.'
+        );
 
-            localStorage.setItem(
-                'deciaRegisteredUser',
-                JSON.stringify(newUser)
-            );
-
-            setLoading(false);
-            setSuccess('¡Cuenta creada exitosamente!');
-
-            setTimeout(() => {
-                if (onRegisterSuccess) {
-                    onRegisterSuccess(newUser);
-                } else if (onBackToLogin) {
-                    onBackToLogin();
-                }
-            }, 1200);
-        }, 900);
-    };
+    } finally {
+        setLoading(false);
+    }
+};
 
     return (
         <div className="register-screen">
@@ -291,7 +288,7 @@ function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
 
                                 <input
                                     type={showPassword ? 'text' : 'password'}
-                                    placeholder="Mínimo 6 caracteres"
+                                    placeholder="Mínimo 8 caracteres"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
@@ -389,6 +386,18 @@ function RegisterScreen({ onBackToLogin, onRegisterSuccess }) {
                                     onChange={(e) =>
                                         handlePhoneChange(e.target.value)
                                     }
+                                />
+                            </div>
+                        </div>
+                        <div className="register-field">
+                            <label>Fecha de nacimiento *</label>
+
+                            <div className="register-input-wrapper">
+                                <input
+                                    type="date"
+                                    value={birthDate}
+                                    onChange={(e) => setBirthDate(e.target.value)}
+                                    max={new Date().toISOString().split('T')[0]}
                                 />
                             </div>
                         </div>

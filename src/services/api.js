@@ -1,4 +1,3 @@
-
 import { getApiBaseUrl } from "./apiConfig";
 import { PATH_APIS } from "./PathApis";
 
@@ -64,56 +63,111 @@ async function apiRequest(endpoint, options = {}) {
     return data;
 }
 
+// ==================== FUNCIONES AUXILIARES DE AUTENTICACIÓN ====================
+
+function saveAuthSession(response) {
+    const data = response?.data || response;
+
+    if (!data?.access_token) {
+        throw new Error('El servidor no devolvió un token de acceso.');
+    }
+
+    localStorage.setItem('deciaToken', data.access_token);
+
+    if (data.refresh_token) {
+        localStorage.setItem('deciaRefreshToken', data.refresh_token);
+    }
+
+    if (data.usuario) {
+        localStorage.setItem(
+            'deciaUser',
+            JSON.stringify(data.usuario)
+        );
+    }
+
+    return data;
+}
+
+export function clearAuthSession() {
+    localStorage.removeItem('deciaToken');
+    localStorage.removeItem('deciaRefreshToken');
+    localStorage.removeItem('deciaUser');
+}
+
 // ==================== AUTENTICACIÓN ====================
 
-export function loginUser(email, password) {
-    return apiRequest(PATH_APIS.AUTH.LOGIN, {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-    });
+export async function loginUser(email, password) {
+    const response = await apiRequest(
+        PATH_APIS.AUTH.LOGIN,
+        {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        }
+    );
+
+    return saveAuthSession(response);
 }
 
-export function registerUser(userData) {
-    return apiRequest(PATH_APIS.AUTH.REGISTRO, {
-        method: "POST",
-        body: JSON.stringify(userData),
-    });
+export async function registerUser(userData) {
+    const response = await apiRequest(
+        PATH_APIS.AUTH.REGISTRO,
+        {
+            method: 'POST',
+            body: JSON.stringify(userData)
+        }
+    );
+
+    return saveAuthSession(response);
 }
 
-export function getUserProfile() {
-    return apiRequest(PATH_APIS.AUTH.PERFIL, {
-        method: "GET",
-    });
+export async function getUserProfile() {
+    return apiRequest(
+        PATH_APIS.AUTH.PERFIL,
+        { method: 'GET' }
+    );
 }
 
-export function refreshSession() {
-    const refreshToken = localStorage.getItem("deciaRefreshToken");
+export async function refreshSession() {
+    const refreshToken = localStorage.getItem('deciaRefreshToken');
 
     if (!refreshToken) {
-        throw new Error("No hay un token de renovación.");
+        throw new Error('No hay un token de renovación.');
     }
 
-    return apiRequest(PATH_APIS.AUTH.REFRESH, {
-        method: "POST",
-        body: JSON.stringify({
-            refresh_token: refreshToken,
-        }),
-    });
+    const response = await apiRequest(
+        PATH_APIS.AUTH.REFRESH,
+        {
+            method: 'POST',
+            body: JSON.stringify({
+                refresh_token: refreshToken
+            })
+        }
+    );
+
+    return saveAuthSession(response);
 }
 
-export function logoutUser() {
-    const refreshToken = localStorage.getItem("deciaRefreshToken");
+export async function logoutUser() {
+    const refreshToken = localStorage.getItem('deciaRefreshToken');
 
     if (!refreshToken) {
-        throw new Error("No hay un token de renovación.");
+        clearAuthSession();
+        return null;
     }
 
-    return apiRequest(PATH_APIS.AUTH.LOGOUT, {
-        method: "POST",
-        body: JSON.stringify({
-            refresh_token: refreshToken,
-        }),
-    });
+    const response = await apiRequest(
+        PATH_APIS.AUTH.LOGOUT,
+        {
+            method: 'POST',
+            body: JSON.stringify({
+                refresh_token: refreshToken
+            })
+        }
+    );
+
+    clearAuthSession();
+
+    return response;
 }
 
 // ==================== TRIAJE CONVERSACIONAL ====================

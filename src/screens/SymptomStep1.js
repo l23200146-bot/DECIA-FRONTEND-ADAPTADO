@@ -1,811 +1,435 @@
-
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import '../styles/SymptomStep1.css';
-
-
-/* =====================================================
-   CUESTIONARIOS DINÁMICOS POR SÍNTOMA
-===================================================== */
-
-const questionnaires = {
-
-    /* =========================
-       DOLOR DE CABEZA
-    ========================= */
-
-    'Dolor de cabeza': [
-
-        {
-            question: '¿Qué tan intenso es el dolor?',
-            options: [
-                'Leve',
-                'Moderado',
-                'Intenso',
-                'Muy intenso',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿Cuándo comenzó el dolor?',
-            options: [
-                'Hoy',
-                'Desde ayer',
-                'Hace 2-3 días',
-                'Hace más de una semana'
-            ]
-        },
-
-        {
-            question: '¿Cómo describirías el dolor?',
-            options: [
-                'Presión',
-                'Pulsátil',
-                'Punzante',
-                'Constante',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿En qué zona de la cabeza se presenta?',
-            options: [
-                'Frente',
-                'Parte posterior',
-                'Un solo lado',
-                'Toda la cabeza',
-                'No lo sé'
-            ],
-            photo: true
-        },
-
-        {
-            question: '¿Presentas alguno de estos síntomas?',
-            options: [
-                'Náuseas',
-                'Mareo',
-                'Visión borrosa',
-                'Sensibilidad a la luz',
-                'Ninguno'
-            ],
-            photo: true
-        }
-
-    ],
-
-
-    /* =========================
-       DOLOR ABDOMINAL
-    ========================= */
-
-    'Dolor abdominal': [
-
-        {
-            question: '¿Qué tan intenso es el dolor abdominal?',
-            options: [
-                'Leve',
-                'Moderado',
-                'Intenso',
-                'Muy intenso',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿Cuándo comenzó el dolor abdominal?',
-            options: [
-                'Hoy',
-                'Desde ayer',
-                'Hace 2-3 días',
-                'Hace más de una semana'
-            ]
-        },
-
-        {
-            question: '¿Dónde se localiza principalmente el dolor?',
-            options: [
-                'Parte superior',
-                'Parte inferior',
-                'Lado derecho',
-                'Lado izquierdo',
-                'Toda la zona'
-            ]
-        },
-
-        {
-            question: '¿Presentas alguno de estos síntomas?',
-            options: [
-                'Náuseas',
-                'Vómito',
-                'Diarrea',
-                'Inflamación',
-                'Ninguno'
-            ],
-            photo: true
-        },
-
-        {
-            question: '¿Cómo ha evolucionado el dolor?',
-            options: [
-                'Ha disminuido',
-                'Se mantiene igual',
-                'Ha aumentado',
-                'Va y viene',
-                'No lo sé'
-            ],
-            photo: true
-        }
-
-    ],
-
-
-    /* =========================
-       DOLOR EN EL PECHO
-    ========================= */
-
-    'Dolor en el pecho': [
-
-        {
-            question: '¿Qué tan intenso es el dolor?',
-            options: [
-                'Leve',
-                'Moderado',
-                'Intenso',
-                'Muy intenso',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿Cuándo comenzó el dolor?',
-            options: [
-                'Hace unos minutos',
-                'Hoy',
-                'Desde ayer',
-                'Hace varios días',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿Cómo describirías el dolor?',
-            options: [
-                'Presión',
-                'Opresión',
-                'Ardor',
-                'Punzada',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿Dónde se presenta principalmente el dolor?',
-            options: [
-                'Centro del pecho',
-                'Lado izquierdo',
-                'Lado derecho',
-                'Se extiende a otra zona',
-                'No lo sé'
-            ],
-            photo: true
-        },
-
-        {
-            question: '¿Presentas alguno de estos síntomas?',
-            options: [
-                'Falta de aire',
-                'Mareo',
-                'Sudoración',
-                'Náuseas',
-                'Ninguno'
-            ],
-            photo: true
-        }
-
-    ],
-
-
-    /* =========================
-       FIEBRE
-    ========================= */
-
-    'Fiebre': [
-
-        {
-            question: '¿Qué temperatura has registrado?',
-            options: [
-                'Menos de 37.5 °C',
-                '37.5 - 38 °C',
-                '38 - 39 °C',
-                'Más de 39 °C',
-                'No lo sé'
-            ]
-        },
-
-        {
-            question: '¿Desde cuándo tienes fiebre?',
-            options: [
-                'Hoy',
-                'Desde ayer',
-                'Hace 2-3 días',
-                'Hace más de una semana'
-            ]
-        },
-
-        {
-            question: '¿Presentas alguno de estos síntomas?',
-            options: [
-                'Escalofríos',
-                'Tos',
-                'Dolor de garganta',
-                'Dolor muscular',
-                'Ninguno'
-            ]
-        },
-
-        {
-            question: '¿Presentas alguna manifestación visible?',
-            options: [
-                'Erupción',
-                'Enrojecimiento',
-                'Inflamación',
-                'Ninguna',
-                'No lo sé'
-            ],
-            photo: true
-        },
-
-        {
-            question: '¿Cómo se encuentra tu estado general?',
-            options: [
-                'Me siento bien',
-                'Me siento algo débil',
-                'Me siento muy débil',
-                'Me cuesta realizar actividades',
-                'No lo sé'
-            ],
-            photo: true
-        }
-
-    ]
-
-};
-
-
-/* =====================================================
-   COMPONENTE
-===================================================== */
+import {
+    iniciarTriaje,
+    responderPregunta
+} from '../services/api';
 
 function SymptomStep1({
     language,
     theme,
     symptomName,
     profileId,
+    profileName, // <--- Recibe el nombre del perfil
     onBack,
     onFinish
 }) {
-
-    const questions =
-        questionnaires[symptomName] ||
-        questionnaires['Dolor de cabeza'];
-
-
-    const [currentQuestion, setCurrentQuestion] = useState(0);
-
-    const [answers, setAnswers] = useState({});
-
-    const [photos, setPhotos] = useState({});
-
-    const [doubts, setDoubts] = useState({});
-
+    const isDark = theme === 'dark';
     const fileInputRef = useRef(null);
 
+    const [sessionId, setSessionId] = useState(null);
+    const [question, setQuestion] = useState(null);
+    const [answer, setAnswer] = useState('');
+    const [photo, setPhoto] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const [answers, setAnswers] = useState({});
+    const [questionCount, setQuestionCount] = useState(0);
+    const [maxQuestions, setMaxQuestions] = useState(12);
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
+    const [error, setError] = useState('');
 
-    const question = questions[currentQuestion];
+    useEffect(() => {
+        let active = true;
 
-    const currentAnswer = answers[currentQuestion];
+        const startEvaluation = async () => {
+            try {
+                setLoading(true);
+                setError('');
 
-    const currentPhoto = photos[currentQuestion];
+                const response = await iniciarTriaje(symptomName);
+                const data = response?.data;
 
-    const doubtActive =
-        doubts[currentQuestion] || false;
+                if (!data) {
+                    throw new Error('El servidor no devolvió los datos del cuestionario.');
+                }
 
+                if (!active) return;
 
-    const selectedAnswers =
-        Array.isArray(currentAnswer)
-            ? currentAnswer
-            : currentAnswer
-                ? [currentAnswer]
-                : [];
+                setSessionId(data.id_sesion);
+                setQuestion(data.pregunta_actual || null);
+                setQuestionCount(data.preguntas_realizadas || 0);
+                setMaxQuestions(data.max_preguntas || 12);
 
-    /* =====================================================
-       SELECCIONAR RESPUESTA
-    ===================================================== */
+            } catch (err) {
+                if (active) {
+                    setError(err.message || 'No fue posible iniciar la evaluación.');
+                }
+            } finally {
+                if (active) setLoading(false);
+            }
+        };
 
-    const handleAnswer = (answer) => {
+        startEvaluation();
 
-        const doubtActive =
-            doubts[currentQuestion] || false;
+        return () => {
+            active = false;
+        };
+    }, [symptomName]);
 
-
-        // ==========================================
-        // MODO NORMAL: SOLO UNA RESPUESTA
-        // ==========================================
-
-        if (!doubtActive) {
-
-            setAnswers({
-                ...answers,
-                [currentQuestion]: answer
-            });
-
-            return;
-        }
-
-
-        // ==========================================
-        // MODO DUDA: MÁXIMO 2 RESPUESTAS
-        // ==========================================
-
-        const currentAnswers =
-            Array.isArray(currentAnswer)
-                ? currentAnswer
-                : currentAnswer
-                    ? [currentAnswer]
-                    : [];
-
-
-        // Si ya está seleccionada, la quitamos
-        if (currentAnswers.includes(answer)) {
-
-            const newAnswers =
-                currentAnswers.filter(
-                    item => item !== answer
-                );
-
-            setAnswers({
-                ...answers,
-                [currentQuestion]: newAnswers
-            });
-
-            return;
-        }
-
-
-        // Máximo 2 respuestas
-        if (currentAnswers.length >= 2) {
-            return;
-        }
-
-
-        const newAnswers = [
-            ...currentAnswers,
-            answer
-        ];
-
-
-        setAnswers({
-            ...answers,
-            [currentQuestion]: newAnswers
-        });
-
+    const handleAnswer = (value) => {
+        setAnswer(value);
+        setError('');
     };
-
-    //handle 
-
-        const handleDoubtToggle = () => {
-
-        const newDoubt =
-            !(doubts[currentQuestion] || false);
-
-
-        setDoubts({
-            ...doubts,
-            [currentQuestion]: newDoubt
-        });
-
-
-        // Si se desactiva la duda y había
-        // dos respuestas, conservamos solamente
-        // la primera.
-        if (!newDoubt && Array.isArray(currentAnswer)) {
-
-            setAnswers({
-                ...answers,
-                [currentQuestion]:
-                    currentAnswer[0] || ''
-            });
-        }
-
-    };
-    /* =====================================================
-       TOMAR FOTO
-    ===================================================== */
 
     const handlePhoto = (event) => {
+        const file = event.target.files?.[0];
 
-        const file = event.target.files[0];
+        if (!file) return;
 
-        if (!file) {
+        if (!file.type.startsWith('image/')) {
+            setError('Selecciona un archivo de imagen válido.');
             return;
         }
 
-
-        const imageUrl = URL.createObjectURL(file);
-
-
-        setPhotos({
-            ...photos,
-
-            [currentQuestion]: {
-                file: file,
-                url: imageUrl
-            }
-        });
-
+        setPhoto(file);
+        setPhotoPreview(URL.createObjectURL(file));
+        setError('');
     };
 
-
-    /* =====================================================
-       ELIMINAR FOTO
-    ===================================================== */
-
     const removePhoto = () => {
+        if (photoPreview) {
+            URL.revokeObjectURL(photoPreview);
+        }
 
-        setPhotos({
-            ...photos,
-
-            [currentQuestion]: null
-        });
-
+        setPhoto(null);
+        setPhotoPreview(null);
 
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-
     };
 
+    const handleContinue = async () => {
+        if (!question || !sessionId || sending) return;
 
-    /* =====================================================
-       SIGUIENTE PREGUNTA
-    ===================================================== */
+        const isImageQuestion = question.tipo === 'imagen';
+        const selectedYes = answer.toLowerCase().includes('sí');
 
-    const handleContinue = () => {
-
-       if (
-            selectedAnswers.length === 0 &&
-            !currentPhoto
-        ) {
+        if (!answer.trim()) {
+            setError('Selecciona o escribe una respuesta para continuar.');
             return;
         }
 
-        if (currentQuestion < questions.length - 1) {
-
-            setCurrentQuestion(currentQuestion + 1);
-
+        if (isImageQuestion && selectedYes && !photo) {
+            setError('Seleccionaste adjuntar una foto. Primero debes elegir una imagen.');
             return;
         }
 
+        try {
+            setSending(true);
+            setError('');
 
-        /* =================================================
-           EVALUACIÓN COMPLETA
-        ================================================= */
+            const response = await responderPregunta({
+                idSesion: sessionId,
+                idPregunta: question.id_node,
+                respuesta: answer,
+                archivo: isImageQuestion && selectedYes ? photo : null
+            });
 
-        const result = {
+            const data = response?.data;
 
-            symptomName: symptomName,
-
-            profileId: profileId,
-
-            answers: answers,
-
-            processedAnswers: processedAnswers,
-
-            photos: photos,
-
-          doubt: doubts
-        };
-
-
-        if (onFinish) {
-            onFinish(result);
-        }
-        const processedAnswers = {};
-
-                Object.keys(answers).forEach((questionIndex) => {
-
-                    const answer = answers[questionIndex];
-
-                    const questionAnswers =
-                        Array.isArray(answer)
-                            ? answer
-                            : [answer];
-
-
-                    processedAnswers[questionIndex] =
-                        questionAnswers.map((value) => ({
-
-                            answer: value,
-
-                            weight:
-                                questionAnswers.length === 2
-                                    ? 0.5
-                                    : 1
-
-                        }));
-
-                });
-
-    };
-
-
-    /* =====================================================
-       PREGUNTA ANTERIOR
-    ===================================================== */
-
-    const handlePrevious = () => {
-
-        if (currentQuestion === 0) {
-
-            if (onBack) {
-                onBack();
+            if (!data) {
+                throw new Error('El servidor no devolvió una respuesta válida.');
             }
 
-            return;
+            const updatedAnswers = {
+                ...answers,
+                [question.id_node]: {
+                    question: question.pregunta,
+                    answer: answer
+                }
+            };
+
+            setAnswers(updatedAnswers);
+
+            // El backend terminó la evaluación
+            if (
+                data.estado === 'COMPLETADO' &&
+                data.resultado_final
+            ) {
+                const finalResult = {
+                    ...data.resultado_final,
+                    resultado_final: data.resultado_final,
+                    symptomName,
+                    profileId,
+                    profileName: profileName || 'Perfil principal', // <--- Se agrega al resultado final
+                    answers: updatedAnswers
+                };
+
+                onFinish(finalResult);
+                return;
+            }
+
+            if (data.estado === 'EN_PROGRESO' && data.pregunta_actual) {
+                setQuestion(data.pregunta_actual);
+                setQuestionCount(data.preguntas_realizadas || questionCount + 1);
+                setAnswer('');
+                removePhoto();
+                return;
+            }
+
+            throw new Error(
+                data.mensaje || 'El cuestionario no pudo continuar.'
+            );
+
+        } catch (err) {
+            setError(err.message || 'Ocurrió un error al enviar tu respuesta.');
+        } finally {
+            setSending(false);
         }
-
-
-        setCurrentQuestion(currentQuestion - 1);
-
     };
 
+    const handlePrevious = () => {
+        if (questionCount <= 0) {
+            onBack();
+        } else {
+            setError(
+                'El cuestionario se procesa en orden. No es posible regresar a una pregunta anterior.'
+            );
+        }
+    };
 
-    /* =====================================================
-       PROGRESO
-    ===================================================== */
+    const progress = Math.min(
+        100,
+        (questionCount / maxQuestions) * 100
+    );
 
-    const progress =
-        ((currentQuestion + 1) / questions.length) * 100;
+    const renderQuestion = () => {
+        if (!question) return null;
 
+        switch (question.tipo) {
+            case 'opcion':
+                return (
+                    <div className="answer-list">
+                        {(question.opciones || []).map((option, index) => (
+                            <button
+                                type="button"
+                                key={index}
+                                className={`answer-option ${
+                                    answer === option ? 'selected' : ''
+                                }`}
+                                onClick={() => handleAnswer(option)}
+                                disabled={sending}
+                            >
+                                <span className="answer-circle"></span>
+                                {option}
+                            </button>
+                        ))}
+                    </div>
+                );
+
+            case 'escala':
+                return (
+                    <div className="answer-list">
+                        <p>Selecciona un valor del 1 al 10:</p>
+
+                        <div className="scale-options">
+                            {Array.from({ length: 10 }, (_, index) => {
+                                const value = String(index + 1);
+
+                                return (
+                                    <button
+                                        type="button"
+                                        key={value}
+                                        className={`answer-option ${
+                                            answer === value ? 'selected' : ''
+                                        }`}
+                                        onClick={() => handleAnswer(value)}
+                                        disabled={sending}
+                                    >
+                                        {value}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+
+            case 'texto':
+                return (
+                    <div className="answer-list">
+                        <textarea
+                            className="text-answer"
+                            value={answer}
+                            onChange={(event) => handleAnswer(event.target.value)}
+                            placeholder="Escribe tu respuesta..."
+                            rows={4}
+                            disabled={sending}
+                        />
+                    </div>
+                );
+
+            case 'imagen':
+                return (
+                    <div className="photo-section">
+                        {(question.opciones || []).map((option, index) => (
+                            <button
+                                type="button"
+                                key={index}
+                                className={`answer-option ${
+                                    answer === option ? 'selected' : ''
+                                }`}
+                                onClick={() => {
+                                    handleAnswer(option);
+
+                                    if (!option.toLowerCase().includes('sí')) {
+                                        removePhoto();
+                                    }
+                                }}
+                                disabled={sending}
+                            >
+                                <span className="answer-circle"></span>
+                                {option}
+                            </button>
+                        ))}
+
+                        {answer.toLowerCase().includes('sí') && (
+                            <>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden-file-input"
+                                    onChange={handlePhoto}
+                                />
+
+                                <button
+                                    type="button"
+                                    className="photo-button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={sending}
+                                >
+                                    Seleccionar fotografía
+                                </button>
+
+                                {photoPreview && (
+                                    <div className="photo-preview">
+                                        <img
+                                            src={photoPreview}
+                                            alt="Vista previa"
+                                            style={{
+                                                maxWidth: '100%',
+                                                maxHeight: '180px',
+                                                objectFit: 'contain'
+                                            }}
+                                        />
+
+                                        <button
+                                            type="button"
+                                            onClick={removePhoto}
+                                        >
+                                            Quitar fotografía
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                );
+
+            default:
+                return (
+                    <p>El tipo de pregunta recibido no es compatible.</p>
+                );
+        }
+    };
 
     return (
-
-        <div className={`symptom-screen ${theme === 'dark' ? 'dark-mode' : ''}`}>
-
-
-            {/* =========================
-                HEADER
-            ========================= */}
-
+        <div className={`symptom-screen ${isDark ? 'dark-mode' : ''}`}>
             <header className="symptom-header">
-
                 <button
                     className="symptom-back"
                     onClick={handlePrevious}
-                    aria-label="Regresar"
+                    disabled={sending}
                 >
-                    ‹
+                    ‹ Regresar
                 </button>
-
 
                 <div className="symptom-header-info">
-
-                    <span>
-                        Evaluación
-                    </span>
-
-
-                    <strong>
-                        {currentQuestion + 1}/5
-                    </strong>
-
+                    <h1>Evaluación de síntomas</h1>
+                    <p>{symptomName}</p>
                 </div>
-
             </header>
 
-
-            {/* =========================
-                BARRA DE PROGRESO
-            ========================= */}
-
             <div className="progress-container">
+                <div className="progress-bar">
+                    <div
+                        style={{
+                            width: `${progress}%`,
+                            height: '100%',
+                            transition: 'width 0.3s ease'
+                        }}
+                    />
+                </div>
 
-                <div
-                    className="progress-bar"
-                    style={{
-                        width: `${progress}%`
-                    }}
-                />
-
+                <span>
+                    Pregunta {questionCount + 1} de {maxQuestions}
+                </span>
             </div>
 
-
-            {/* =========================
-                CONTENIDO
-            ========================= */}
-
             <main className="symptom-content">
-
-
-                {/* SÍNTOMA */}
-
-                <div className="symptom-tag">
-
-                    Síntoma: {symptomName}
-
-                </div>
-
-
-                {/* =========================
-                    PREGUNTA
-                ========================= */}
-
-                <section className="question-card">
-
-
-                    <p className="question-number">
-
-                        Pregunta {currentQuestion + 1} de 5
-
-                    </p>
-
-
-                    <h1>
-
-                        {question.question}
-
-                    </h1>
-
-
-                    {/* OPCIONES */}
-
-                    <div className="answer-list">
-
-                        {question.options.map((option) => (
-
-                            <button
-                                key={option}
-                               className={`answer-option ${
-                                    selectedAnswers.includes(option)
-                                        ? 'selected'
-                                        : ''
-                                }`}
-                                onClick={() =>
-                                    handleAnswer(option)
-                                }
-                            >
-
-                                <span className="answer-circle">
-
-                                   {selectedAnswers.includes(option)
-                                        ? '✓'
-                                        : ''
-                                    }
-
-                                </span>
-
-
-                                {option}
-
-                            </button>
-
-                        ))}
-
+                {loading ? (
+                    <div className="question-card">
+                        <p>Preparando tu evaluación...</p>
                     </div>
+                ) : error && !question ? (
+                    <div className="question-card">
+                        <p>{error}</p>
 
-
-                    {/* =========================
-                        CÁMARA
-                    ========================= */}
-
-                    {question.photo && (
-
-                        <div className="photo-section">
-
-
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                capture="environment"
-                                className="hidden-file-input"
-                                onChange={handlePhoto}
-                            />
-
-
-                            {!currentPhoto ? (
-
-                                <button
-                                    className="photo-button"
-                                    onClick={() =>
-                                        fileInputRef.current.click()
-                                    }
-                                >
-                                    📷 Tomar foto
-                                </button>
-
-                            ) : (
-
-                                <div className="photo-preview">
-
-                                    <img
-                                        src={currentPhoto.url}
-                                        alt="Vista previa"
-                                    />
-
-
-                                    <button
-                                        onClick={removePhoto}
-                                    >
-                                        Eliminar foto
-                                    </button>
-
-                                </div>
-
-                            )}
-
+                        <button
+                            className="continue-button"
+                            onClick={onBack}
+                        >
+                            Regresar
+                        </button>
+                    </div>
+                ) : question ? (
+                    <>
+                        <div className="symptom-tag">
+                            {symptomName}
                         </div>
 
-                    )}
+                        <section className="question-card">
+                            <span className="question-number">
+                                Pregunta {questionCount + 1}
+                            </span>
 
-                </section>
+                            <h2>{question.pregunta}</h2>
 
+                            {renderQuestion()}
 
-                {/* =========================
-                    TOGGLE
-                ========================= */}
+                            {error && (
+                                <p
+                                    role="alert"
+                                    style={{
+                                        color: '#c62828',
+                                        fontSize: '13px',
+                                        marginTop: '12px'
+                                    }}
+                                >
+                                    {error}
+                                </p>
+                            )}
 
-                <div className="doubt-container">
-
-                    <span>
-                        Dudo entre dos respuestas
-                    </span>
-
-
-                   <button
-                        className={`toggle ${
-                            doubtActive ? 'on' : ''
-                        }`}
-                        onClick={handleDoubtToggle}
-                        aria-label="Dudo entre dos respuestas"
-                    >
-
-                        <span />
-
-                    </button>
-
-                </div>
-
-
-                {/* =========================
-                    BOTÓN CONTINUAR
-                ========================= */}
-
-                <button
-                    className="continue-button"
-                    disabled={
-                        selectedAnswers.length === 0 &&
-                        !currentPhoto
-                    }
-                    onClick={handleContinue}
-                >
-
-                    {currentQuestion === 4
-                        ? 'Ver resultado'
-                        : 'Enviar y Continuar'
-                    }
-
-                </button>
-
-
+                            <button
+                                type="button"
+                                className="continue-button"
+                                onClick={handleContinue}
+                                disabled={sending}
+                            >
+                                {sending ? 'Enviando respuesta...' : 'Continuar'}
+                            </button>
+                        </section>
+                    </>
+                ) : (
+                    <div className="question-card">
+                        <p>No hay una pregunta disponible.</p>
+                    </div>
+                )}
             </main>
-
         </div>
-
     );
-
 }
 
-
 export default SymptomStep1;
-

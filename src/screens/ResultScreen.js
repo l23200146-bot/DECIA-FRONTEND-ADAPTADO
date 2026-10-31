@@ -9,38 +9,45 @@ function ResultScreen({
     onFindDoctor
 }) {
     const isDark = theme === 'dark';
-    const [showCauses, setShowCauses] = useState(true);
+
     const [showFirstAid, setShowFirstAid] = useState(true);
     const [showDisclaimer, setShowDisclaimer] = useState(false);
+    const [showAnswers, setShowAnswers] = useState(true);
+    const [showFlags, setShowFlags] = useState(true);
 
     /*
-     * =====================================================
-     * RESULTADO TEMPORAL
-     * Posteriormente vendrá del backend.
-     * =====================================================
+     * RESULTADO DEL BACKEND
      */
 
-    
-    const urgency = (
-        result?.urgency || 'AMARILLO'
-    ).toUpperCase();
+    const finalResult =
+        result?.resultado_final ||
+        result?.data?.resultado_final ||
+        result ||
+        {};
 
+    const rawUrgency = (
+        finalResult.clasificacion_color ||
+        result?.urgency ||
+        ''
+    ).toString().trim().toUpperCase();
 
     /*
-     * =====================================================
-     * DATOS DEL TRIAGE
-     * =====================================================
+     * NIVELES DE TRIAGE
+     *
+     * 1 ROJO
+     * 2 NARANJA
+     * 3 AMARILLO
+     * 4 AZUL
+     * 5 VERDE
      */
 
     const urgencyData = {
-
         ROJO: {
             level: 1,
             label: 'Rojo',
             title: 'Atención inmediata',
             time: 'Requiere atención médica inmediata.',
-            description:
-                'Se recomienda buscar atención médica de inmediato.',
+            description: 'Busca atención médica de emergencia.',
             className: 'rojo'
         },
 
@@ -48,10 +55,8 @@ function ResultScreen({
             level: 2,
             label: 'Naranja',
             title: 'Emergencia',
-            time:
-                'Requiere atención médica prioritaria.',
-            description:
-                'Se recomienda valoración médica lo antes posible.',
+            time: 'Requiere atención médica prioritaria, en un máximo aproximado de 10 a 15 minutos.',
+            description: 'Se recomienda valoración médica lo antes posible.',
             className: 'naranja'
         },
 
@@ -59,239 +64,142 @@ function ResultScreen({
             level: 3,
             label: 'Amarillo',
             title: 'Urgencia',
-            time:
-                'Requiere atención médica en las próximas 60 minutos.',
-            description:
-                'Se recomienda valoración médica en un periodo corto.',
+            time: 'Requiere valoración médica en un máximo aproximado de 60 minutos.',
+            description: 'Se recomienda atención médica en un periodo corto.',
             className: 'amarillo'
         },
 
-        VERDE: {
-            level: 4,
-            label: 'Verde',
-            title: 'Menos urgente',
-            time:
-                'Puede esperar hasta aproximadamente 120 minutos.',
-            description:
-                'No se identifican señales de urgencia inmediata.',
-            className: 'verde'
-        },
-
         AZUL: {
-            level: 5,
+            level: 4,
             label: 'Azul',
             title: 'No urgente',
-            time:
-                'Puede ser atendido mediante consulta externa.',
-            description:
-                'No se identifican señales de urgencia.',
+            time: 'Puede ser atendido mediante consulta externa, en un máximo aproximado de 240 minutos.',
+            description: 'No se identifican señales de urgencia inmediata.',
             className: 'azul'
-        }
+        },
 
+        VERDE: {
+            level: 5,
+            label: 'Verde',
+            title: 'Menos urgente',
+            time: 'Puede esperar hasta aproximadamente 120 minutos para recibir atención.',
+            description: 'No se identifican señales de urgencia inmediata.',
+            className: 'verde'
+        }
     };
 
-
-    const currentUrgency =
-        urgencyData[urgency] ||
-        urgencyData.AMARILLO;
-
+    // Fallback dinámico seguro: Si la urgencia no es reconocida, no asume 'AMARILLO'
+    const currentUrgency = urgencyData[rawUrgency] || {
+        level: 'N/D',
+        label: 'Sin clasificación',
+        title: 'No se pudo determinar el nivel de urgencia',
+        time: 'Es necesario revisar el resultado de la evaluación.',
+        description: 'Solicita una valoración profesional para confirmar tu estado de salud.',
+        className: 'amarillo'
+    };
 
     /*
-     * =====================================================
-     * DATOS RECIBIDOS
-     * =====================================================
+     * DATOS DEL PACIENTE Y EVALUACIÓN
      */
 
     const symptomName =
         result?.symptomName || 'No especificado';
 
+    const justification =
+        finalResult.justificacion ||
+        'No se recibió una justificación del sistema.';
+
+    const symptoms =
+        Array.isArray(finalResult.sintomas_identificados)
+            ? finalResult.sintomas_identificados
+            : [];
+
+    const redFlags =
+        Array.isArray(finalResult.banderas_rojas)
+            ? finalResult.banderas_rojas
+            : [];
+
+    const recommendations =
+        finalResult.recomendaciones ||
+        'No se recibieron recomendaciones adicionales.';
+
+    const legalNotice =
+        finalResult.aviso_legal ||
+        'Esta evaluación es orientativa y no sustituye la valoración de un profesional de la salud.';
+
+    const visualAnalysis =
+        finalResult.analisis_visual;
+
     const answers =
         result?.answers || {};
 
-    const profileId =
-        result?.profileId || 'No especificado';
-
-    const doubt =
-        result?.doubt;
-
-
-    /*
-     * =====================================================
-     * SÍNTOMAS PRESENTADOS
-     * =====================================================
-     */
-
-    const symptomsPresented =
-        Object.values(answers).filter(
-            (answer) =>
-                answer &&
-                answer !== 'Ninguno'
-        );
-
-
-    /*
-     * =====================================================
-     * POSIBLES CAUSAS
-     *
-     * Información orientativa.
-     * NO representa un diagnóstico.
-     * =====================================================
-     */
-
-    const possibleCauses = {
-
-        'Dolor de cabeza': [
-            'Cefalea tensional',
-            'Migraña',
-            'Deshidratación',
-            'Alteraciones del sueño'
-        ],
-
-        'Dolor abdominal': [
-            'Indigestión',
-            'Gastritis',
-            'Alteraciones gastrointestinales',
-            'Inflamación abdominal'
-        ],
-
-        'Dolor en el pecho': [
-            'Dolor muscular',
-            'Reflujo gastroesofágico',
-            'Ansiedad',
-            'Alteraciones cardiovasculares'
-        ],
-
-        'Fiebre': [
-            'Infección viral',
-            'Infección bacteriana',
-            'Proceso inflamatorio',
-            'Infección respiratoria'
-        ]
-
-    };
-
-
-    /*
-     * =====================================================
-     * FIEBRE COMO CONTENIDO DE RESPALDO
-     * =====================================================
-     */
-
-    const causes =
-        possibleCauses[symptomName] ||
-        possibleCauses['Fiebre'];
-
-
-    /*
-     * =====================================================
-     * PRIMEROS AUXILIOS / QUÉ HACER
-     * =====================================================
-     */
-
-    const firstAid = {
-
-        'Dolor de cabeza': [
-            'Descansar en un lugar tranquilo.',
-            'Mantener una adecuada hidratación.',
-            'Evitar luces o ruidos intensos si aumentan la molestia.'
-        ],
-
-        'Dolor abdominal': [
-            'Mantener reposo.',
-            'Mantener una adecuada hidratación.',
-            'Evitar alimentos que puedan aumentar la molestia.'
-        ],
-
-        'Dolor en el pecho': [
-            'Suspender actividades físicas y mantener reposo.',
-            'Evitar realizar esfuerzos.',
-            'Si el dolor aumenta o aparece dificultad para respirar, buscar atención inmediata.'
-        ],
-
-        'Fiebre': [
-            'Mantener reposo.',
-            'Mantener una adecuada hidratación.',
-            'Mantener un ambiente fresco y cómodo.',
-            'Vigilar la aparición de nuevos signos de alarma.'
-        ]
-
-    };
-
-
-    const firstAidData =
-        firstAid[symptomName] ||
-        firstAid['Fiebre'];
-
-
-    /*
-     * =====================================================
-     * ¿EXISTE DUDA ENTRE RESPUESTAS?
-     * =====================================================
-     */
-
     const hasDoubt =
-        doubt === true ||
-        doubt === 'true' ||
-        doubt === 'Sí' ||
-        doubt === 'Si' ||
-        doubt === 'sí' ||
-        doubt === 'si';
-
-
-    /*
-     * =====================================================
-     * LLAMAR AL 911
-     * =====================================================
-     */
+        result?.doubt === true;
 
     const showEmergencyButton =
-        urgency === 'ROJO' ||
-        urgency === 'NARANJA';
-
-
-    const handleEmergencyCall = () => {
-
-        window.location.href = 'tel:911';
-
-    };
-
+        rawUrgency === 'ROJO' || rawUrgency === 'NARANJA';
 
     /*
-     * =====================================================
+     * FORMATEAR RECOMENDACIONES
+     */
+
+    const recommendationList = Array.isArray(recommendations)
+        ? recommendations
+        : null;
+
+    /*
+     * LLAMADA A EMERGENCIAS
+     */
+
+    const handleEmergencyCall = () => {
+        window.location.href = 'tel:911';
+    };
+
+    /*
      * UBICAR MÉDICO
-     *
-     * Envía el resultado actual a App.js.
-     * App.js decidirá la especialidad sugerida
-     * y abrirá NearbyDoctorsScreen.
-     * =====================================================
      */
 
     const handleFindDoctor = () => {
-
         if (onFindDoctor) {
             onFindDoctor(result);
         }
-
     };
 
+    /*
+     * ANÁLISIS VISUAL
+     */
+
+    const getVisualText = () => {
+        if (!visualAnalysis) {
+            return 'No se realizó un análisis visual.';
+        }
+
+        if (typeof visualAnalysis === 'string') {
+            return visualAnalysis;
+        }
+
+        if (typeof visualAnalysis === 'object') {
+            return (
+                visualAnalysis.descripcion ||
+                visualAnalysis.mensaje ||
+                visualAnalysis.resultado ||
+                'Se recibió información del análisis visual.'
+            );
+        }
+
+        return 'No hay información visual disponible.';
+    };
 
     return (
-
         <div
             className={`result-screen ${currentUrgency.className} ${
                 isDark ? 'dark-mode' : ''
             }`}
         >
 
-            {/* ==========================================
-                FONDO DECORATIVO
-            ========================================== */}
+            {/* FONDO DECORATIVO */}
 
-            <div
-                className="medical-pattern"
-                aria-hidden="true"
-            >
-
+            <div className="medical-pattern" aria-hidden="true">
                 <span>+</span>
                 <span>○</span>
                 <span>+</span>
@@ -300,13 +208,9 @@ function ResultScreen({
                 <span>○</span>
                 <span>◇</span>
                 <span>+</span>
-
             </div>
 
-
-            {/* ==========================================
-                HEADER
-            ========================================== */}
+            {/* HEADER */}
 
             <header className="result-header">
 
@@ -317,16 +221,12 @@ function ResultScreen({
                     ‹ Inicio
                 </button>
 
-                <h1>
-                    Resultado
-                </h1>
+                <h1>Resultado</h1>
 
                 <button
                     className="pdf-button"
                     onClick={() =>
-                        alert(
-                            'La exportación PDF se conectará posteriormente.'
-                        )
+                        alert('La exportación PDF se conectará posteriormente.')
                     }
                 >
                     PDF
@@ -334,71 +234,46 @@ function ResultScreen({
 
             </header>
 
-
-            {/* ==========================================
-                CARTA MÉDICA
-            ========================================== */}
+            {/* CONTENIDO */}
 
             <main className="result-content">
 
                 <div className="medical-card">
 
-
-                    {/* ==================================
-                        AVISO MÉDICO
-                    ================================== */}
+                    {/* AVISO MÉDICO */}
 
                     <div className="medical-disclaimer">
 
                         <div>
-
-                            <strong>
-                                Aviso importante
-                            </strong>
+                            <strong>Aviso importante</strong>
 
                             <p>
-                                DECIA proporciona una orientación
-                                inicial y no sustituye el diagnóstico,
-                                consejo o tratamiento de un profesional
-                                de la salud.
+                                {legalNotice}
                             </p>
-
                         </div>
 
                         <button
                             className="disclaimer-toggle"
                             onClick={() =>
-                                setShowDisclaimer(
-                                    !showDisclaimer
-                                )
+                                setShowDisclaimer(!showDisclaimer)
                             }
                         >
-                            {showDisclaimer
-                                ? 'Ocultar'
-                                : 'Ver más'}
+                            {showDisclaimer ? 'Ocultar' : 'Ver más'}
                         </button>
 
                     </div>
 
-
                     {showDisclaimer && (
-
                         <div className="disclaimer-extra">
-
-                            Esta valoración se basa en la información
-                            proporcionada durante la evaluación.
-                            Si los síntomas empeoran, aparecen nuevos
-                            signos de alarma o existe preocupación,
-                            busca atención médica profesional.
-
+                            DECIA proporciona orientación inicial.
+                            No sustituye un diagnóstico, consejo o
+                            tratamiento médico. Si los síntomas empeoran
+                            o aparece una señal de alarma, busca atención
+                            médica profesional.
                         </div>
-
                     )}
 
-
-                    {/* ==================================
-                        RESULTADO DE TRIAGE
-                    ================================== */}
+                    {/* RESULTADO DE TRIAGE */}
 
                     <section className="urgency-card">
 
@@ -407,51 +282,35 @@ function ResultScreen({
                             <span className="urgency-circle"></span>
 
                             <div>
-
                                 <span className="urgency-level">
                                     Nivel {currentUrgency.level}
                                 </span>
 
-                                <h2>
-                                    {currentUrgency.label}
-                                </h2>
-
+                                <h2>{currentUrgency.label}</h2>
                             </div>
 
                         </div>
 
-
-                        <h3>
-                            {currentUrgency.title}
-                        </h3>
-
+                        <h3>{currentUrgency.title}</h3>
 
                         <p className="urgency-time">
                             {currentUrgency.time}
                         </p>
 
-
                         <p className="urgency-description">
                             {currentUrgency.description}
                         </p>
 
-
                     </section>
 
-
-                    {/* ==================================
-                        EMERGENCIAS
-                    ================================== */}
+                    {/* EMERGENCIAS */}
 
                     {showEmergencyButton && (
-
                         <section className="emergency-section">
 
                             <div className="emergency-text">
 
-                                <strong>
-                                    Atención prioritaria
-                                </strong>
+                                <strong>Atención prioritaria</strong>
 
                                 <span>
                                     Si se trata de una emergencia,
@@ -460,310 +319,293 @@ function ResultScreen({
 
                             </div>
 
-
                             <button
                                 className="emergency-button"
-                                onClick={
-                                    handleEmergencyCall
-                                }
+                                onClick={handleEmergencyCall}
                             >
                                 Llamar a emergencias 911
                             </button>
 
                         </section>
-
                     )}
 
-
-                    {/* ==================================
-                        DATOS EVALUADOS
-                    ================================== */}
+                    {/* JUSTIFICACIÓN */}
 
                     <section className="clinical-card">
 
-                        <h2>
-                            Datos evaluados
-                        </h2>
+                        <h2>Justificación del resultado</h2>
 
+                        <p style={{
+                            color: '#52636a',
+                            fontSize: '13px',
+                            lineHeight: '1.6',
+                            margin: 0
+                        }}>
+                            {justification}
+                        </p>
+
+                    </section>
+
+                    {/* DATOS EVALUADOS */}
+
+                    <section className="clinical-card">
+
+                        <h2>Datos evaluados</h2>
 
                         <div className="clinical-item">
 
-                            <span>
-                                Síntoma inicial
-                            </span>
+                            <span>Síntoma inicial</span>
 
-                            <strong>
-                                {symptomName}
-                            </strong>
+                            <strong>{symptomName}</strong>
 
                         </div>
-
 
                         <div className="clinical-item">
-
-                            <span>
-                                Perfil evaluado
-                            </span>
-
+                            <span>Perfil evaluado</span>
                             <strong>
-                                {profileId}
+                                {result?.profileName || 'Perfil de la cuenta'}
                             </strong>
-
                         </div>
-
 
                         <div className="clinical-item symptoms-item">
 
-                            <span>
-                                Síntomas presentados
-                            </span>
-
+                            <span>Síntomas identificados</span>
 
                             <div className="symptom-chips">
 
-                                {symptomsPresented.length > 0 ? (
-
-                                    symptomsPresented.map(
-                                        (symptom, index) => (
-
-                                            <span
-                                                key={index}
-                                                className="symptom-chip"
-                                            >
-                                                {symptom}
-                                            </span>
-
-                                        )
-                                    )
-
+                                {symptoms.length > 0 ? (
+                                    symptoms.map((symptom, index) => (
+                                        <span
+                                            key={index}
+                                            className="symptom-chip"
+                                        >
+                                            {typeof symptom === 'string'
+                                                ? symptom
+                                                : JSON.stringify(symptom)}
+                                        </span>
+                                    ))
                                 ) : (
-
                                     <span className="no-symptoms">
-                                        No se registraron síntomas
-                                        adicionales.
+                                        No se registraron síntomas adicionales.
                                     </span>
-
                                 )}
 
                             </div>
 
                         </div>
 
+                        <div className="clinical-item">
+
+                            <span>Nivel de urgencia recibido</span>
+
+                            <strong>
+                                {finalResult.nivel_urgencia ??
+                                    currentUrgency.level}
+                            </strong>
+
+                        </div>
 
                         <div className="clinical-item">
 
-                            <span>
-                                Padecimientos previos
-                            </span>
+                            <span>Fecha de evaluación</span>
 
                             <strong>
-                                Información del perfil
+                                {finalResult.fecha_creacion
+                                    ? new Date(
+                                        finalResult.fecha_creacion
+                                    ).toLocaleString('es-MX')
+                                    : 'No disponible'}
                             </strong>
 
                         </div>
 
                     </section>
 
-
-                    {/* ==================================
-                        POSIBLES CAUSAS
-                    ================================== */}
+                    {/* BANDERAS ROJAS */}
 
                     <section className="causes-card">
 
                         <button
                             className="causes-button"
-                            onClick={() =>
-                                setShowCauses(
-                                    !showCauses
-                                )
-                            }
+                            onClick={() => setShowFlags(!showFlags)}
                         >
-
-                            <span>
-                                Mostrar posibles causas
-                            </span>
+                            <span>Señales de alarma identificadas</span>
 
                             <span className="accordion-arrow">
-                                {showCauses ? '⌃' : '⌄'}
+                                {showFlags ? '⌃' : '⌄'}
                             </span>
-
                         </button>
 
-
-                        {showCauses && (
-
+                        {showFlags && (
                             <div className="causes-content">
 
-                                <p>
-                                    Estas posibilidades son
-                                    únicamente orientativas y
-                                    no representan un diagnóstico
-                                    médico.
-                                </p>
-
-
-                                <ul>
-
-                                    {causes.map(
-                                        (cause, index) => (
-
+                                {redFlags.length > 0 ? (
+                                    <ul>
+                                        {redFlags.map((flag, index) => (
                                             <li key={index}>
-                                                {cause}
+                                                {typeof flag === 'string'
+                                                    ? flag
+                                                    : JSON.stringify(flag)}
                                             </li>
-
-                                        )
-                                    )}
-
-                                </ul>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p>
+                                        El sistema no registró banderas rojas
+                                        adicionales en esta evaluación.
+                                    </p>
+                                )}
 
                             </div>
-
                         )}
 
                     </section>
 
-
-                    {/* ==================================
-                        QUÉ HACER MIENTRAS ESPERA
-                    ================================== */}
+                    {/* RECOMENDACIONES */}
 
                     <section className="first-aid-card">
 
                         <button
                             className="first-aid-button"
                             onClick={() =>
-                                setShowFirstAid(
-                                    !showFirstAid
-                                )
+                                setShowFirstAid(!showFirstAid)
                             }
                         >
-
-                            <span>
-                                Qué hacer mientras espera
-                            </span>
+                            <span>Recomendaciones</span>
 
                             <span className="accordion-arrow">
                                 {showFirstAid ? '⌃' : '⌄'}
                             </span>
-
                         </button>
 
-
                         {showFirstAid && (
-
                             <div className="first-aid-content">
 
-                                <ul>
-
-                                    {firstAidData.map(
-                                        (recommendation, index) => (
-
-                                            <li key={index}>
-                                                {recommendation}
-                                            </li>
-
-                                        )
-                                    )}
-
-                                </ul>
-
+                                {recommendationList ? (
+                                    <ul>
+                                        {recommendationList.map(
+                                            (recommendation, index) => (
+                                                <li key={index}>
+                                                    {recommendation}
+                                                </li>
+                                            )
+                                        )}
+                                    </ul>
+                                ) : (
+                                    <p style={{
+                                        color: '#52636a',
+                                        fontSize: '13px',
+                                        lineHeight: '1.6'
+                                    }}>
+                                        {recommendations}
+                                    </p>
+                                )}
 
                                 <p className="first-aid-warning">
-                                    Estas recomendaciones son
-                                    generales y no sustituyen
-                                    la atención médica profesional.
+                                    Sigue las indicaciones de un profesional
+                                    de la salud. Estas recomendaciones no
+                                    sustituyen una valoración médica.
                                 </p>
 
                             </div>
-
                         )}
 
                     </section>
 
+                    {/* ANÁLISIS VISUAL */}
 
-                    {/* ==================================
-                        DUDA ENTRE RESPUESTAS
-                    ================================== */}
+                    <section className="clinical-card">
+
+                        <h2>Análisis visual</h2>
+
+                        <p style={{
+                            color: '#52636a',
+                            fontSize: '13px',
+                            lineHeight: '1.6',
+                            margin: 0
+                        }}>
+                            {getVisualText()}
+                        </p>
+
+                    </section>
+
+                    {/* DUDA */}
 
                     {hasDoubt && (
-
                         <section className="doubt-card">
 
-                            <div className="doubt-icon">
-                                ?
-                            </div>
+                            <div className="doubt-icon">?</div>
 
                             <div>
-
                                 <strong>
-                                    Se indicó una duda durante
-                                    la evaluación
+                                    Se indicó una duda durante la evaluación
                                 </strong>
 
                                 <p>
-                                    Como existió duda entre dos
-                                    respuestas, se recomienda que
-                                    un profesional de la salud
-                                    valide esta valoración para
-                                    obtener mayor precisión.
+                                    Se recomienda que un profesional de la
+                                    salud valide la información proporcionada.
                                 </p>
-
                             </div>
 
                         </section>
-
                     )}
 
-
-                    {/* ==================================
-                        RESUMEN DE RESPUESTAS
-                    ================================== */}
+                    {/* RESUMEN DE RESPUESTAS */}
 
                     <section className="answers-summary">
 
-                        <h2>
-                            Resumen de respuestas
-                        </h2>
+                        <button
+                            className="causes-button"
+                            onClick={() =>
+                                setShowAnswers(!showAnswers)
+                            }
+                        >
+                            <span>Resumen de respuestas</span>
 
+                            <span className="accordion-arrow">
+                                {showAnswers ? '⌃' : '⌄'}
+                            </span>
+                        </button>
 
-                        {Object.entries(answers).length > 0 ? (
+                        {showAnswers && (
 
-                            Object.entries(answers).map(
-                                ([question, answer]) => (
+                            Object.keys(answers).length > 0 ? (
 
-                                    <div
-                                        className="answer-summary-item"
-                                        key={question}
-                                    >
+                                Object.entries(answers).map(
+                                    ([questionId, item]) => (
 
-                                        <span>
-                                            Pregunta {Number(question) + 1}
-                                        </span>
+                                        <div
+                                            className="answer-summary-item"
+                                            key={questionId}
+                                        >
 
-                                        <strong>
-                                            {answer}
-                                        </strong>
+                                            <span>
+                                                {item.question ||
+                                                    `Pregunta ${questionId}`}
+                                            </span>
 
-                                    </div>
+                                            <strong>
+                                                {item.answer ?? item}
+                                            </strong>
 
+                                        </div>
+
+                                    )
                                 )
+
+                            ) : (
+
+                                <p className="no-answers">
+                                    No hay respuestas registradas.
+                                </p>
+
                             )
-
-                        ) : (
-
-                            <p className="no-answers">
-                                No hay respuestas registradas.
-                            </p>
 
                         )}
 
                     </section>
 
-
-                    {/* ==================================
-                        BOTÓN MÉDICO
-                    ================================== */}
+                    {/* MÉDICO */}
 
                     <button
                         className="doctor-button"
@@ -772,16 +614,12 @@ function ResultScreen({
                         Ubicar Médico
                     </button>
 
-
                 </div>
 
             </main>
 
-
         </div>
-
     );
-
 }
 
 export default ResultScreen;
