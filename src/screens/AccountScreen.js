@@ -325,7 +325,7 @@ useEffect(() => {
                 )
             );
 
-            if (selectedProfile.id === photoTarget) {
+          if (selectedProfile?.id === photoTarget) {
                 setSelectedProfile(prev => ({
                     ...prev,
                     photo

@@ -216,12 +216,15 @@ function App() {
 const handleEvaluationFinish = (result) => {
     const finalResult = result?.resultado_final || result;
 
+    const classification =
+        finalResult?.clasificacion_color ||
+        result?.urgency;
+
     const resultWithUrgency = {
         ...result,
-        urgency:
-            finalResult?.clasificacion_color ||
-            result?.urgency ||
-            'AMARILLO'
+        ...(classification
+            ? { urgency: String(classification).toUpperCase() }
+            : {})
     };
 
     const updatedEvaluations = [
@@ -232,14 +235,13 @@ const handleEvaluationFinish = (result) => {
     setRecentEvaluations(updatedEvaluations);
 
     localStorage.setItem(
-        'deciaRecentEvaluations',
+        RECENT_EVALUATIONS_KEY,
         JSON.stringify(updatedEvaluations)
     );
 
     setEvaluationResult(resultWithUrgency);
     setCurrentScreen('result');
 };
-
 
     const handleRecentSelect = (evaluation) => {
 
@@ -293,7 +295,16 @@ const handleEvaluationFinish = (result) => {
 
     };
 
-
+const getStoredUser = () => {
+    try {
+        return JSON.parse(
+            localStorage.getItem('deciaUser') || '{}'
+        );
+    } catch (error) {
+        console.error('Error al recuperar el usuario:', error);
+        return {};
+    }
+};
     const handleCreateProfile = () => {
 
         console.log(
@@ -388,7 +399,7 @@ const handleEvaluationFinish = (result) => {
 
             <DashboardScreen
 
-                user={JSON.parse(localStorage.getItem('deciaUser') || '{}')}
+                user={getStoredUser()}
 
                 language={language}
                 theme={theme}
